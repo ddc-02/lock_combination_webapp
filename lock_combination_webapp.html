@@ -448,6 +448,13 @@
       color: var(--muted);
     }
 
+    @media (max-width: 760px) {
+      .suggestion-panel > div {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+    }
+
     @keyframes rise-in {
       from {
         opacity: 0;
@@ -707,9 +714,18 @@
       </div>
 
       <div class="panel suggestion-panel" aria-live="polite">
-        <p class="suggestion-title">Suggested Password</p>
-        <p id="suggestedPassword" class="suggested-password">---</p>
-        <p id="suggestedNote" class="suggested-note">Add at least one combination to generate an average-based suggestion.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <p class="suggestion-title">📊 Average-Based</p>
+            <p id="suggestedPassword" class="suggested-password">---</p>
+            <p id="suggestedNote" class="suggested-note">Add at least one combination to generate a suggestion.</p>
+          </div>
+          <div>
+            <p class="suggestion-title">📈 Median-Based</p>
+            <p id="suggestedPasswordMedian" class="suggested-password">---</p>
+            <p id="suggestedNoteMedian" class="suggested-note">Add at least one combination to generate a suggestion.</p>
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -781,6 +797,8 @@
     const entryCount = document.getElementById("entryCount");
     const suggestedPasswordEl = document.getElementById("suggestedPassword");
     const suggestedNoteEl = document.getElementById("suggestedNote");
+    const suggestedPasswordMedianEl = document.getElementById("suggestedPasswordMedian");
+    const suggestedNoteMedianEl = document.getElementById("suggestedNoteMedian");
     const summaryModal = document.getElementById("summaryModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
 
@@ -847,11 +865,32 @@
       return total / numbers.length;
     }
 
+    function medianOf(numbers) {
+      if (numbers.length === 0) {
+        return 0;
+      }
+      const sorted = [...numbers].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 !== 0) {
+        return sorted[mid];
+      } else {
+        return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+      }
+    }
+
     function currentAverages() {
       return [
         averageOf(digitBuckets[0]),
         averageOf(digitBuckets[1]),
         averageOf(digitBuckets[2])
+      ];
+    }
+
+    function currentMedians() {
+      return [
+        medianOf(digitBuckets[0]),
+        medianOf(digitBuckets[1]),
+        medianOf(digitBuckets[2])
       ];
     }
 
@@ -910,27 +949,43 @@
     function renderSuggestedPassword() {
       if (history.length === 0) {
         suggestedPasswordEl.textContent = "---";
-        suggestedNoteEl.textContent = "Add at least one combination to generate an average-based suggestion.";
+        suggestedNoteEl.textContent = "Add at least one combination to generate a suggestion.";
+        suggestedPasswordMedianEl.textContent = "---";
+        suggestedNoteMedianEl.textContent = "Add at least one combination to generate a suggestion.";
         return;
       }
 
       const averages = currentAverages();
+      const medians = currentMedians();
       const usedCombinations = new Set(history.map((entry) => entry.combo));
-      const suggestion = buildSuggestedPassword(averages, usedCombinations);
+      
+      const suggestionAvg = buildSuggestedPassword(averages, usedCombinations);
+      const suggestionMed = buildSuggestedPassword(medians, usedCombinations);
 
-      if (!suggestion) {
+      // Render average suggestion
+      if (!suggestionAvg) {
         suggestedPasswordEl.textContent = "N/A";
         suggestedNoteEl.textContent = "All 3-digit combinations are already used.";
-        return;
+      } else {
+        suggestedPasswordEl.textContent = suggestionAvg;
+        suggestedNoteEl.textContent = "Based on averages: "
+          + averages.map((avg) => avg.toFixed(2)).join(" / ");
       }
 
-      suggestedPasswordEl.textContent = suggestion;
-      suggestedNoteEl.textContent = "Based on average digits "
-        + averages.map((avg) => avg.toFixed(2)).join(" / ")
-        + ", excluding any combination already submitted.";
+      // Render median suggestion
+      if (!suggestionMed) {
+        suggestedPasswordMedianEl.textContent = "N/A";
+        suggestedNoteMedianEl.textContent = "All 3-digit combinations are already used.";
+      } else {
+        suggestedPasswordMedianEl.textContent = suggestionMed;
+        suggestedNoteMedianEl.textContent = "Based on medians: "
+          + medians.join(" / ");
+      }
 
-      if (suggestion === ACTUAL_PASSWORD) {
-        showSummaryModal(suggestion);
+      // Check if either suggestion matches the password
+      if (suggestionAvg === ACTUAL_PASSWORD || suggestionMed === ACTUAL_PASSWORD) {
+        const finalSuggestion = suggestionAvg === ACTUAL_PASSWORD ? suggestionAvg : suggestionMed;
+        showSummaryModal(finalSuggestion);
       }
     }
 
