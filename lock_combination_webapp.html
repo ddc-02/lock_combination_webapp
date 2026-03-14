@@ -471,13 +471,192 @@
     }
 
     @media (max-width: 760px) {
+      body {
+        padding: 10px;
+      }
+
+      .app {
+        border-radius: 12px;
+      }
+
+      .header {
+        padding: 16px;
+      }
+
+      .header h1 {
+        font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+      }
+
+      .header p {
+        font-size: 0.9rem;
+      }
+
+      .content {
+        gap: 14px;
+        padding: 16px;
+      }
+
+      .panel {
+        padding: 14px;
+        border-radius: 10px;
+      }
+
       .cards {
         grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .digit-card {
+        padding: 12px;
+      }
+
+      .input-row {
+        gap: 8px;
+        flex-direction: column;
       }
 
       .input-row input {
-        flex: 1 1 100%;
         width: 100%;
+        padding: 14px;
+        font-size: 1.1rem;
+      }
+
+      button {
+        padding: 14px 16px;
+        font-size: 1rem;
+        width: 100%;
+        min-height: 48px;
+      }
+
+      .add-btn,
+      .clear-btn {
+        width: 100%;
+      }
+
+      .history-table {
+        font-size: 0.85rem;
+      }
+
+      .history-table th,
+      .history-table td {
+        padding: 6px 4px;
+      }
+
+      .delete-btn {
+        padding: 6px 6px;
+        font-size: 0.8rem;
+        min-height: auto;
+      }
+
+      .modal-content {
+        width: min(95vw, 100%);
+        border-radius: 16px;
+      }
+
+      .modal-header {
+        padding: 16px;
+      }
+
+      .modal-header h2 {
+        font-size: clamp(1.4rem, 4vw, 1.8rem);
+      }
+
+      .modal-body {
+        padding: 16px;
+      }
+
+      .summary-grid {
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .summary-stat {
+        padding: 10px;
+      }
+
+      .stat-value {
+        font-size: 1.3rem;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+      }
+
+      .suggested-password {
+        font-size: clamp(1.4rem, 4vw, 2rem);
+      }
+
+      .suggestion-panel {
+        padding: 14px;
+      }
+
+      .avg-item {
+        font-size: 0.9rem;
+        padding: 6px 0;
+      }
+
+      .suggested-note {
+        font-size: 0.85rem;
+      }
+
+      .metric {
+        gap: 4px;
+      }
+
+      .metric .label {
+        font-size: 0.75rem;
+      }
+
+      .metric .value {
+        font-size: 1rem;
+      }
+
+      .entry-count {
+        font-size: 0.85rem;
+        margin-top: 8px;
+      }
+
+      .status {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header h1 {
+        font-size: 1.2rem;
+        margin-bottom: 6px;
+      }
+
+      .header p {
+        font-size: 0.85rem;
+        margin-top: 6px;
+      }
+
+      .suggested-password {
+        font-size: 1.4rem;
+        letter-spacing: 0.1em;
+      }
+
+      .pill {
+        padding: 3px 8px;
+        font-size: 0.9rem;
+        min-width: 32px;
+      }
+
+      .modal-footer {
+        padding: 12px 16px;
+      }
+
+      .modal-close-btn {
+        width: 100%;
+        padding: 12px 16px;
+      }
+
+      .summary-history-item {
+        padding: 3px 8px;
+        font-size: 0.85rem;
+        margin: 3px 3px 3px 0;
       }
     }
   </style>
@@ -571,7 +750,7 @@
           </div>
           <div class="summary-stat">
             <div class="stat-label">Final Guess</div>
-            <div class="stat-value" id="summaryFinalGuess">NaN</div>
+            <div class="stat-value" id="summaryFinalGuess">172</div>
           </div>
         </div>
         <div class="summary-section">
@@ -605,7 +784,7 @@
     const summaryModal = document.getElementById("summaryModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
 
-    const ACTUAL_PASSWORD = "Enter actual password here";
+    const ACTUAL_PASSWORD = "172";
 
     const lastEls = [
       document.getElementById("last1"),
