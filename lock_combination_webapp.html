@@ -700,16 +700,22 @@
           <h3>Digit 1</h3>
           <div class="metric"><span class="label">Last:</span><span id="last1" class="value">-</span></div>
           <div class="metric"><span class="label">Average:</span><span id="avg1" class="value">0.00</span></div>
+          <div class="metric"><span class="label">Std Dev:</span><span id="std1" class="value">0.00</span></div>
+          <div class="metric"><span class="label">State:</span><span id="lock1" class="value">Unlocked</span></div>
         </article>
         <article class="digit-card">
           <h3>Digit 2</h3>
           <div class="metric"><span class="label">Last:</span><span id="last2" class="value">-</span></div>
           <div class="metric"><span class="label">Average:</span><span id="avg2" class="value">0.00</span></div>
+          <div class="metric"><span class="label">Std Dev:</span><span id="std2" class="value">0.00</span></div>
+          <div class="metric"><span class="label">State:</span><span id="lock2" class="value">Unlocked</span></div>
         </article>
         <article class="digit-card">
           <h3>Digit 3</h3>
           <div class="metric"><span class="label">Last:</span><span id="last3" class="value">-</span></div>
           <div class="metric"><span class="label">Average:</span><span id="avg3" class="value">0.00</span></div>
+          <div class="metric"><span class="label">Std Dev:</span><span id="std3" class="value">0.00</span></div>
+          <div class="metric"><span class="label">State:</span><span id="lock3" class="value">Unlocked</span></div>
         </article>
       </div>
 
@@ -816,6 +822,22 @@
       document.getElementById("avg3")
     ];
 
+    const stdEls = [
+      document.getElementById("std1"),
+      document.getElementById("std2"),
+      document.getElementById("std3")
+    ];
+
+    const lockEls = [
+      document.getElementById("lock1"),
+      document.getElementById("lock2"),
+      document.getElementById("lock3")
+    ];
+
+    const LOCK_MIN_ENTRIES = 20;
+    const LOCK_STD_DEV_THRESHOLD = 0.8;
+    const LOCK_WINDOW_RADIUS = 2;
+
     const digitBuckets = [[], [], []];
     const history = [];
     const rejectedSuggestions = {
@@ -878,6 +900,17 @@
       return total / numbers.length;
     }
 
+    function standardDeviationOf(numbers, mean = averageOf(numbers)) {
+      if (numbers.length === 0) {
+        return 0;
+      }
+      const variance = numbers.reduce((sum, n) => {
+        const diff = n - mean;
+        return sum + (diff * diff);
+      }, 0) / numbers.length;
+      return Math.sqrt(variance);
+    }
+
     function medianOf(numbers) {
       if (numbers.length === 0) {
         return 0;
@@ -899,6 +932,37 @@
       ];
     }
 
+    function circularDistance(a, b) {
+      const linear = Math.abs(a - b);
+      return Math.min(linear, 10 - linear);
+    }
+
+    function allowedDigitsAroundMean(mean) {
+      const digits = [];
+      for (let digit = 0; digit <= 9; digit++) {
+        if (circularDistance(digit, mean) <= LOCK_WINDOW_RADIUS) {
+          digits.push(digit);
+        }
+      }
+      return digits;
+    }
+
+    function currentPositionStats() {
+      return digitBuckets.map((bucket) => {
+        const mean = averageOf(bucket);
+        const stdDev = standardDeviationOf(bucket, mean);
+        const entries = bucket.length;
+        const isLocked = entries >= LOCK_MIN_ENTRIES && stdDev < LOCK_STD_DEV_THRESHOLD;
+        return {
+          mean,
+          stdDev,
+          entries,
+          isLocked,
+          allowedDigits: isLocked ? allowedDigitsAroundMean(mean) : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        };
+      });
+    }
+
     function currentMedians() {
       return [
         medianOf(digitBuckets[0]),
@@ -914,22 +978,31 @@
       return (d1 * d1) + (d2 * d2) + (d3 * d3);
     }
 
-    function buildSuggestedPassword(averages, usedCombinations) {
+    function buildSuggestedPassword(averages, usedCombinations, positionStats) {
       let bestCombo = null;
       let bestScore = Number.POSITIVE_INFINITY;
 
-      for (let n = 0; n <= 999; n++) {
-        const combo = String(n).padStart(3, "0");
-        if (usedCombinations.has(combo)) {
-          continue;
-        }
+      const digitSpace = positionStats || [
+        { allowedDigits: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
+        { allowedDigits: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
+        { allowedDigits: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }
+      ];
 
-        const digits = combo.split("").map((d) => Number(d));
-        const score = scoreCandidate(digits, averages);
+      for (const d1 of digitSpace[0].allowedDigits) {
+        for (const d2 of digitSpace[1].allowedDigits) {
+          for (const d3 of digitSpace[2].allowedDigits) {
+            const combo = "" + d1 + d2 + d3;
+            if (usedCombinations.has(combo)) {
+              continue;
+            }
 
-        if (score < bestScore || (score === bestScore && combo < bestCombo)) {
-          bestScore = score;
-          bestCombo = combo;
+            const score = scoreCandidate([d1, d2, d3], averages);
+
+            if (score < bestScore || (score === bestScore && combo < bestCombo)) {
+              bestScore = score;
+              bestCombo = combo;
+            }
+          }
         }
       }
 
@@ -978,6 +1051,7 @@
 
       const averages = currentAverages();
       const medians = currentMedians();
+      const positionStats = currentPositionStats();
       const usedCombinations = new Set(history.map((entry) => entry.combo));
       const excludedCombinations = new Set([
         ...usedCombinations,
@@ -985,8 +1059,13 @@
         ...rejectedSuggestions.median
       ]);
       
-      const suggestionAvg = buildSuggestedPassword(averages, excludedCombinations);
+      const suggestionAvg = buildSuggestedPassword(averages, excludedCombinations, positionStats);
       const suggestionMed = buildSuggestedPassword(medians, excludedCombinations);
+
+      const candidatePoolSize = positionStats.reduce((product, stat) => {
+        return product * stat.allowedDigits.length;
+      }, 1);
+      const lockedPositions = positionStats.filter((stat) => stat.isLocked).length;
 
       // Render average suggestion
       if (!suggestionAvg) {
@@ -995,7 +1074,9 @@
       } else {
         suggestedPasswordEl.textContent = suggestionAvg;
         suggestedNoteEl.textContent = "Based on averages: "
-          + averages.map((avg) => avg.toFixed(2)).join(" / ");
+          + averages.map((avg) => avg.toFixed(2)).join(" / ")
+          + " | Locked: " + lockedPositions + "/3"
+          + " | Pool: " + candidatePoolSize;
       }
 
       // Render median suggestion
@@ -1023,11 +1104,18 @@
     }
 
     function renderSummary() {
+      const positionStats = currentPositionStats();
+
       for (let i = 0; i < 3; i++) {
         const bucket = digitBuckets[i];
+        const stats = positionStats[i];
         const lastValue = bucket.length ? bucket[bucket.length - 1] : "-";
         lastEls[i].textContent = String(lastValue);
-        avgEls[i].textContent = averageOf(bucket).toFixed(2);
+        avgEls[i].textContent = stats.mean.toFixed(2);
+        stdEls[i].textContent = stats.stdDev.toFixed(2);
+        lockEls[i].textContent = stats.isLocked
+          ? "Locked (" + stats.allowedDigits.join("") + ")"
+          : "Unlocked (" + stats.entries + "/" + LOCK_MIN_ENTRIES + ")";
       }
 
       entryCount.textContent = "Entries: " + history.length;
