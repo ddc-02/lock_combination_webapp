@@ -1410,6 +1410,14 @@
       history.push({ combo: value, digits });
       trackRejectedSuggestion(rejectedSuggestions, value);
 
+      // Also blacklist the current average and median guesses
+      if (currentSuggestionAvg) {
+        trackRejectedSuggestion(rejectedSuggestions, currentSuggestionAvg);
+      }
+      if (currentSuggestionMed) {
+        trackRejectedSuggestion(rejectedSuggestions, currentSuggestionMed);
+      }
+
       saveToStorage();
       renderSummary();
       renderHistory();
